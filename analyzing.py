@@ -276,7 +276,7 @@ def generateRoute(output):
     shortest_path, shortest_time = router_plan(data, sign)
     print('The shortest route of interesting tourist attractions:')
     print(shortest_path)
-    print('The predicted time for the trip: ', shortest_time)
+    print('The predicted transportation time for the trip: ', shortest_time)
     # write to file and use for visualization
     output_name = './Data/' + output
     file = open(output_name, 'w')
