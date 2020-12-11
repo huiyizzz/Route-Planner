@@ -51,6 +51,28 @@ def Map(loc, title):
             'zoom': 10})
     fig.show()
 
+def ScatterMap(df, title, name, zoom, opacity, size_max):
+    fig = px.scatter_mapbox(df, lat='lat', lon='lon', hover_name=name,
+                            zoom=zoom, size=[1] * len(df), opacity=opacity,
+                            color_discrete_sequence=px.colors.qualitative.G10,
+                            size_max=size_max
+                            )
+    fig.update_layout(mapbox_style='open-street-map', title=title)
+    fig.show()
+
+
+def ScatterColorMap(df, color, title, name, zoom, opacity, size_max):
+    fig = px.scatter_mapbox(df, lat='lat', lon='lon', hover_name=name,
+                            zoom=zoom, size=[1] * len(df), color = color, opacity=opacity,
+                            color_discrete_sequence=px.colors.qualitative.G10,
+                            size_max=size_max
+                            )
+    fig.update_layout(mapbox_style='open-street-map', title=title)
+    fig.show()
+
+
+
+
 def fill(X):
     name = X['name']
     if name is NaN:
@@ -73,14 +95,6 @@ def haversine(point):
     d = 0.5 - np.cos((point['lat'] - loc[0]) * p)/2 + np.cos(loc[0] * p) * np.cos(point['lat'] * p) * (1 - np.cos((point['lon'] - loc[1]) * p))/2
     return 12742000 * np.arcsin(np.sqrt(d))
 
-def scatterMap(df, title, name=None):
-    if name is None:
-        fig = px.scatter_mapbox(lat=df["lat"], lon=df["lon"])
-    else:
-        fig = px.scatter_mapbox(lat=df["lat"], lon=df["lon"], hover_name=name)
-        
-    fig.update_layout(mapbox_style="open-street-map", title=title)
-    fig.show()
 
 file = 'Data/osm/amenities-vancouver.json.gz'
 df = pd.read_json(file, lines=True)
@@ -102,16 +116,16 @@ name = nums.loc[nums['counts'] == nums.counts.max()].values[0][0]
 themax = tags[tags['cuisine'] == name]
 themax = pd.merge(restaurant, themax, left_index=True, right_index=True)
 # Map(themax, 'the most restaurant with cuisine: '+name)
-scatterMap(themax, 'the most restaurant with cuisine: '+name)
+ScatterMap(themax, 'the most restaurant with cuisine: '+name, themax['name'], 11, 0.8,8)
 
 # with chain restaurant
 chains = tags[tags['brand:wikidata'].notna()]
 chains = pd.merge(restaurant, chains, left_index=True, right_index=True)
-scatterMap(chains, 'the chain restaurant in vancouver')
+ScatterColorMap(chains, chains['name'], 'the chain restaurant in vancouver', chains['name'], 11, 0.8, 8)
 
 # non chain restaurant
 nonchains = restaurant[~restaurant.isin(chains)]
-scatterMap(nonchains, 'non chains restaurant in vancouver')
+ScatterMap(nonchains, 'non chains restaurant in vancouver', nonchains['name'], 11, 0.8,8)
 
 # exif = getGPSData('1.jpg')
 # latitude = exif['Latitude']
