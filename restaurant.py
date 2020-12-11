@@ -118,6 +118,11 @@ themax = pd.merge(restaurant, themax, left_index=True, right_index=True)
 # Map(themax, 'the most restaurant with cuisine: '+name)
 ScatterMap(themax, 'the most restaurant with cuisine: '+name, themax['name'], 11, 0.8,8)
 
+# different cuisine restaurant
+cuisine = tags[tags['cuisine'].notna()]
+cuisine = pd.merge(restaurant, cuisine, left_index=True, right_index=True)
+ScatterColorMap(cuisine, cuisine['cuisine'], 'different cuisine restaurant in vancouver', cuisine['name'], 11, 0.8, 8)
+
 # with chain restaurant
 chains = tags[tags['brand:wikidata'].notna()]
 chains = pd.merge(restaurant, chains, left_index=True, right_index=True)
