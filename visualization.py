@@ -28,8 +28,6 @@ def Map(loc, title):
 
     fig.update_layout(
         title=title,
-        # height=2300,
-        # width=2030,
         height=700,
         width=700,
         mapbox={

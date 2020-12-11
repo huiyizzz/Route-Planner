@@ -2,13 +2,19 @@ from cleaning import *
 from analyzing import *
 from visualization import *
 
+
 def imageInfo():
-    print('preprocessing data and analyzing data...')
+    print('preprocessing data...')
     print()
-    osm_df, img_df, merged_df, near_df = generateImg()
+    osm_df, img_df = generateImg()
     print('done')
     print()
+    print('analyzing data...')
+    print()
+    merged_df, near_df = combineImgData(osm_df, img_df)
+    print()
     showImgRoute(osm_df, img_df, merged_df, near_df)
+
 
 def restaurant():
     print('preprocessing data and analyzing data...')
@@ -16,7 +22,9 @@ def restaurant():
     nearest, restaurant, name, themax, cuisine, chains, nonchains = generateRestaurant()
     print('done')
     print()
-    #showRestaurant(nearest, restaurant, name, themax, cuisine, chains, nonchains)
+    showRestaurant(nearest, restaurant, name, themax,
+                   cuisine, chains, nonchains)
+
 
 def interestingRoute():
     print('preprocessing data...')
@@ -28,6 +36,7 @@ def interestingRoute():
     print('done!')
     print()
     showRoute()
+
 
 if __name__ == '__main__':
     imageInfo()

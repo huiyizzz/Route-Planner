@@ -30,6 +30,7 @@ class TSP:
         self.best_path = [0] * (self.num + 1)  # shortest route
         self.best_time = 99999999  # shortest time
 
+
     def __backtrack(self, node):
         if node > self.num:
             v = self.matrix[self.temp_path[self.num]][1]
@@ -50,6 +51,7 @@ class TSP:
                     self.temp_path[node], self.temp_path[i] = self.temp_path[i], self.   temp_path[node]
         return
 
+
     def solve(self):
 
         self.__backtrack(2)
@@ -61,9 +63,8 @@ class TSP:
 
         return path_str, self.best_time
 
+
 # calculate review scores
-
-
 def create_df(data):
     out = []
     for index, row in data.iterrows():
@@ -89,9 +90,8 @@ def label(score):
         label = 'neu'
     return label
 
+
 # format transportation time
-
-
 def format(row):
     for idx in range(len(name)):
         if row[name[idx]] != 0:
@@ -105,9 +105,8 @@ def format(row):
             row[name[idx]] = mins
     return row
 
+
 # return the distance matrix between each attraction
-
-
 def distance_matrix(transport, time):
     for i in range(len(transport)):
         row = transport[i]
@@ -122,9 +121,8 @@ def distance_matrix(transport, time):
             time[row[0]][row2[0]] = dur
     return time
 
+
 # prepare for calculating shortest path
-
-
 def pre_TSP(data, time):
     member = list(data['name'])
     city_name = {}
@@ -148,9 +146,8 @@ def pre_TSP(data, time):
 
     return city_name, arr
 
+
 # get attraction time
-
-
 def calculate_time(data, sign):
     filename = './Data/time_matrix' + str(sign) + '.json'
     if not (path.exists(filename)):
@@ -174,9 +171,34 @@ def calculate_time(data, sign):
 
     return time
 
+
+def haversine(lat1, lon1, lat2, lon2):
+    # haversine function reference:
+    # https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula/21623206
+    a = (np.sin(np.radians(lat2 - lat1) / 2)**2
+         + np.cos(np.radians(lat1))
+         * np.cos(np.radians(lat2))
+         * np.sin(np.radians(lon2 - lon1) / 2)**2)
+    return 12742000 * np.arcsin(np.sqrt(a))
+
+
+def find_amenity(img, osm):
+    dis = haversine(img['lat'], img['lon'], osm['lat'], osm['lon'])
+    return np.argmin(dis)
+
+
+def find_amenities(img, osm):
+    a = haversine(img['lat'], img['lon'], img['next_lat'], img['next_lon'])
+    b = haversine(img['lat'], img['lon'], osm['lat'], osm['lon'])
+    c = haversine(img['next_lat'], img['next_lon'], osm['lat'], osm['lon'])
+    semi_p = (a + b + c) / 2
+    area = np.sqrt(semi_p * (semi_p - a) * (semi_p - b) * (semi_p - c))
+    dis = (2 * area) / a
+    triangle = abs(b**2 - c**2) - a**2
+    return list(dis[(dis < 100) & (triangle <= 0) | (b < 100) | (c < 100)].index)
+
+
 # return route plan and trip time
-
-
 def router_plan(data, sign):
     if sign == 0:
         # rate first
@@ -194,6 +216,34 @@ def router_plan(data, sign):
     shortest_path, shortest_time = tsp.solve()
 
     return shortest_path, shortest_time
+
+
+def combineImgData(osm_df, img_df):
+    index = img_df.apply(find_amenity, osm=osm_df, axis=1)
+    merged_df = pd.merge(img_df, osm_df, left_on=index, right_index=True)
+    print('The image data with nearest locatons in osm data:')
+    print(merged_df)
+    print()
+    img_df['next_lat'] = img_df['lat'].shift(-1)
+    img_df['next_lon'] = img_df['lon'].shift(-1)
+
+    osm_index = img_df.apply(find_amenities, osm=osm_df, axis=1)
+    near_df = pd.DataFrame(columns=['img_index', 'osm_index'])
+
+    for i in range(len(osm_index)):
+        temp_df = pd.DataFrame(
+            {'img_index': [i] * len(osm_index[i]), 'osm_index': osm_index[i]})
+        near_df = near_df.append(temp_df, ignore_index=True)
+
+    near_df = pd.merge(img_df, near_df, left_index=True,
+                       right_on='img_index', how='inner')
+    near_df = near_df.drop_duplicates('osm_index').reset_index(drop=True)
+    near_df = pd.merge(near_df, osm_df, left_on='osm_index',
+                       right_index=True, how='left')
+    print('The near amenities merged with user\'s route:')
+    print(near_df)
+
+    return merged_df, near_df
 
 
 def generateRoute(output):

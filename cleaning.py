@@ -31,7 +31,7 @@ stop_words = set(stopwords.words('english'))
 file = 'Data/osm/amenities-vancouver.json.gz'
 location = geocoder.ip('me')
 loc = location.latlng
-#loc = [49.282761666666666, -123.12364166666666]
+# loc = [49.282761666666666, -123.12364166666666]
 
 cuisine_style = ['acadian', 'afghan', 'american', 'arab', 'brazilian',
                  'buddhist', 'burmese', 'cambodian', 'caribbean', 'chinese',
@@ -100,9 +100,8 @@ def extract(name):
         name = name[:index]
     return name
 
+
 # create df that contains reviews
-
-
 def create_df(result):
 
     lat = [place['geometry']['location']['lat'] for place in result['results']]
@@ -119,9 +118,8 @@ def create_df(result):
     review = data.apply(find_review_id, axis=1)
     return review
 
+
 # add additional attraction
-
-
 def addition():
     result = gmaps.places_nearby(location='49.252336254279, -123.1142930446478',
                                  radius=50000, open_now=False, type='tourist_attraction')
@@ -184,9 +182,8 @@ def spelling(reviews):
             res.append({'text': str(text)})
     return res
 
+
 # find attraction location
-
-
 def find_location(row):
     loc = gmaps.find_place(input=row['name'], input_type='textquery',
                            fields=['geometry/location'])
@@ -217,35 +214,14 @@ def load_img_exif(path):
     return df
 
 
-def haversine(lat1, lon1, lat2, lon2):
+def haversine(df):
     # haversine function reference:
     # https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula/21623206
-    a = (np.sin(np.radians(lat2 - lat1) / 2)**2
-         + np.cos(np.radians(lat1))
-         * np.cos(np.radians(lat2))
-         * np.sin(np.radians(lon2 - lon1) / 2)**2)
+    a = (np.sin(np.radians(loc[0] - df['lat']) / 2)**2
+         + np.cos(np.radians(df['lat']))
+         * np.cos(np.radians(loc[0]))
+         * np.sin(np.radians(loc[1] - df['lon']) / 2)**2)
     return 12742000 * np.arcsin(np.sqrt(a))
-
-
-def find_amenity(img, osm):
-    dis = haversine(img['lat'], img['lon'], osm['lat'], osm['lon'])
-    return np.argmin(dis)
-
-
-def find_amenities(img, osm):
-    a = haversine(img['lat'], img['lon'], img['next_lat'], img['next_lon'])
-    b = haversine(img['lat'], img['lon'], osm['lat'], osm['lon'])
-    c = haversine(img['next_lat'], img['next_lon'], osm['lat'], osm['lon'])
-    semi_p = (a + b + c) / 2
-    area = np.sqrt(semi_p * (semi_p - a) * (semi_p - b) * (semi_p - c))
-    dis = (2 * area) / a
-    triangle = abs(b**2 - c**2) - a**2
-    return list(dis[(dis < 100) & (triangle <= 0) | (b < 100) | (c < 100)].index)
-
-
-def nearMe(df):
-    dis = haversine(df['lat'], df['lon'], loc[0], loc[1])
-    return dis
 
 
 def generateReview(out_directory):
@@ -300,7 +276,7 @@ def generateReview(out_directory):
     reviews.info()
     print()
     # save and use for analyzing.py
-    # reviews.to_json(out_directory)
+    reviews.to_json(out_directory)
 
 
 def generateImg():
@@ -317,30 +293,7 @@ def generateImg():
     print('The image data:')
     print(img_df)
     print()
-    index = img_df.apply(find_amenity, osm=osm_df, axis=1)
-    merged_df = pd.merge(img_df, osm_df, left_on=index, right_index=True)
-    print('The image data with nearest locatons in osm data:')
-    print(merged_df)
-    print()
-    img_df['next_lat'] = img_df['lat'].shift(-1)
-    img_df['next_lon'] = img_df['lon'].shift(-1)
-
-    osm_index = img_df.apply(find_amenities, osm=osm_df, axis=1)
-    near_df = pd.DataFrame(columns=['img_index', 'osm_index'])
-
-    for i in range(len(osm_index)):
-        temp_df = pd.DataFrame(
-            {'img_index': [i] * len(osm_index[i]), 'osm_index': osm_index[i]})
-        near_df = near_df.append(temp_df, ignore_index=True)
-
-    near_df = pd.merge(img_df, near_df, left_index=True,
-                       right_on='img_index', how='inner')
-    near_df = near_df.drop_duplicates('osm_index').reset_index(drop=True)
-    near_df = pd.merge(near_df, osm_df, left_on='osm_index',
-                       right_index=True, how='left')
-    print('The near amenities merged with user\'s route:')
-    print(near_df)
-    return osm_df, img_df, merged_df, near_df
+    return osm_df, img_df
 
 
 def getStyle(string):
@@ -355,7 +308,7 @@ def generateRestaurant():
     df = pd.read_json(file, lines=True)
     restaurant = df[df['amenity'] == 'restaurant']
     restaurant = restaurant.reset_index(drop=True)
-    restaurant['dist'] = restaurant.apply(nearMe, axis=1)
+    restaurant['dist'] = restaurant.apply(haversine, axis=1)
     nearest = restaurant[restaurant['dist'] < 300]
 
     tags = restaurant['tags'].apply(pd.Series)
