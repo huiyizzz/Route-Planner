@@ -358,6 +358,7 @@ def generateRestaurant():
     tags = restaurant['tags'].apply(pd.Series)
     tags['style'] = tags['cuisine'].apply(getStyle)
     nums = tags.groupby('style').size().reset_index(name='counts')
+    nums = nums.drop(nums[nums['style']=='other'].index)
     name = nums.loc[nums['counts'] == nums.counts.max()].values[0][0]
     themax = tags[tags['style'] == name]
     themax = pd.merge(restaurant, themax, left_index=True, right_index=True)
@@ -371,6 +372,7 @@ def generateRestaurant():
     chains = tags[tags['brand:wikidata'].notna()]
     chains = pd.merge(restaurant, chains, left_index=True, right_index=True)
     
-    # non chain restaurant
-    nonchains = restaurant[~restaurant.isin(chains)]
+    # non chain restaurant 
+    nonchains = restaurant[~restaurant.isin(chains)].dropna()
+    
     return nearest, restaurant, name, themax, cuisine, chains, nonchains
