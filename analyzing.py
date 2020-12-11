@@ -54,7 +54,7 @@ class TSP:
 
         self.__backtrack(2)
 
-        path_str = ""
+        path_str = ''
         for i in range(1, self.num + 1):
             path_str += self.names[self.best_path[i]] + '->'
         path_str += self.names[1]
@@ -218,15 +218,18 @@ def generateRoute(output):
     data = data.drop(['reviews', 'clean_text', 'polarity',
                       'subjectivity', 'rating', 'user_ratings_total'], axis=1)
     data = data.reset_index()
+    print('The time metric')
     print(data)
+    print()
     # find shortest path
     sign = 1
     shortest_path, shortest_time = router_plan(data, sign)
-    print(shortest_path, shortest_time)
-
+    print('The shortest route of interesting tourist attractions:')
+    print(shortest_path)
+    print('The predicted time for the trip: ',shortest_time)
     # write to file and use for visualization
     output_name = './Data/' + output
-    file = open(output_name, "w")
+    file = open(output_name, 'w')
     file.write(shortest_path + '\n')
     file.write(str(shortest_time))
     file.close()

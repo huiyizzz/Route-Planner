@@ -72,29 +72,23 @@ def ScatterColorMap(df, color, title, name, zoom, opacity, size_max):
 
 
 
-
-def fill(X):
-    name = X['name']
-    if name is NaN:
-        if 'brand:wikidata' in X['tags']:
-            wikidata = X['tags']['brand:wikidata']
-            q_dict = get_entity_dict_from_api(wikidata)
-            name = WikidataItem(q_dict).get_label()
-            # print(X.loc[i, ['name', 'tags']])
-        elif 'brand:wikipedia' in X['tags']:
-            wikipedia = X['tags']['brand:wikipedia']
-            name = wikipedia[3:]
-        # else:
-        #   print(X[['amenity', 'tags']])
-    return name
-
-
 #reference: https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula/21623206
 def haversine(point):
     p = np.pi/180
     d = 0.5 - np.cos((point['lat'] - loc[0]) * p)/2 + np.cos(loc[0] * p) * np.cos(point['lat'] * p) * (1 - np.cos((point['lon'] - loc[1]) * p))/2
     return 12742000 * np.arcsin(np.sqrt(d))
+def haversine2(lat1, lon1, lat2, lon2):
+    # haversine function reference:
+    # https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula/21623206
+    a = (np.sin(np.radians(lat2 - lat1) / 2)**2
+         + np.cos(np.radians(lat1))
+         * np.cos(np.radians(lat2))
+         * np.sin(np.radians(lon2 - lon1) / 2)**2)
+    return 12742000 * np.arcsin(np.sqrt(a))
 
+def nearMe(df, loc):
+    dis = haversine2(df['lat'], df['lon'], loc[0], loc[1])
+    return dis
 
 file = 'Data/osm/amenities-vancouver.json.gz'
 df = pd.read_json(file, lines=True)
@@ -105,8 +99,8 @@ df = pd.read_json(file, lines=True)
 
 restaurant = df[df['amenity'] == 'restaurant']
 restaurant = restaurant.reset_index(drop=True)
-restaurant['dist'] = restaurant.apply(haversine,axis=1)
-# nearest = restaurant[restaurant['dist'] == restaurant.agg('min')['dist']]
+restaurant['dist'] = restaurant.apply(nearMe, axis=1)
+
 nearest = restaurant[restaurant['dist'] < 300]
 # Map(restaurant, 'all restaurant')
 Map(nearest, 'nearest')

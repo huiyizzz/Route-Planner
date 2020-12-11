@@ -16,7 +16,7 @@ def Map(loc, title):
 
     token = 'pk.eyJ1IjoiY2FyaW5hemhhbyIsImEiOiJja2ljYm1scWYwaDJuMndwM3lxaWZrd2VjIn0.ZwPLmscfNLPAF4VI6Uy4PA'
     fig = go.Figure(go.Scattermapbox(
-        mode="markers+lines+text",
+        mode='markers+lines+text',
         lat=loc['lat'],
         lon=loc['lon'],
         hovertext=loc['name'],
@@ -24,7 +24,7 @@ def Map(loc, title):
         textfont=dict(size=13, color='red'),
         marker={'size': 12,
                 'symbol': 'bus'},
-        textposition="bottom right"))
+        textposition='bottom right'))
 
     fig.update_layout(
         title=title,
@@ -50,8 +50,18 @@ def ScatterMap(df, title, name, zoom, opacity, size_max):
     fig.show()
 
 
+def ScatterColorMap(df, color, title, name, zoom, opacity, size_max):
+    fig = px.scatter_mapbox(df, lat='lat', lon='lon', hover_name=name,
+                            zoom=zoom, size=[1] * len(df), color = color, opacity=opacity,
+                            color_discrete_sequence=px.colors.qualitative.G10,
+                            size_max=size_max
+                            )
+    fig.update_layout(mapbox_style='open-street-map', title=title)
+    fig.show()
+
+
 def RouteMap(df1, labels, lat, lon, title, zoom, opacity, size_max):
-    fig = px.scatter_mapbox(df1, lat="lat_y", lon="lon_y", labels=labels,
+    fig = px.scatter_mapbox(df1, lat='lat_y', lon='lon_y', labels=labels,
                             zoom=zoom, color=labels,
                             hover_name='name', size=[1] * len(df1), opacity=opacity,
                             color_discrete_sequence=px.colors.qualitative.G10,
@@ -69,7 +79,7 @@ def RouteMap(df1, labels, lat, lon, title, zoom, opacity, size_max):
     fig.update_layout(
         title=title,
         autosize=True,
-        mapbox_style="open-street-map")
+        mapbox_style='open-street-map')
     fig.show()
 
 
@@ -91,13 +101,13 @@ def formate(word):
 # create wordcloud
 def wordcloud(nltk_count, title):
     mask = np.array(Image.open('./Image/pic.jpg'))
-    wordcloud = WordCloud(background_color="white",
+    wordcloud = WordCloud(background_color='white',
                           contour_width=3, mask=mask,
                           contour_color='blue'
                           ).generate_from_frequencies(nltk_count)
 
     plt.figure(figsize=(20, 17))
-    plt.imshow(wordcloud, interpolation="bilinear")
+    plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis('off')
     plt.title(title, fontsize=30)
 
@@ -113,8 +123,8 @@ def showRoute():
     # read the recommended path
     loc = pd.read_json('./Data/hot_locs.json', orient='record')
     loc = loc.set_index('name')
-    file = open("./Data/route.txt")
-    order = file.read().replace("\n", "->")
+    file = open('./Data/route.txt')
+    order = file.read().replace('\n', '->')
     name = re.split(r'->', order)
 
     # sorted by the order of path (start from origin)
@@ -143,9 +153,17 @@ def showRoute():
     wordcloud(nltk_count_low, title)
 
 
-def generateImgRoute(osm_df, img_df, merged_df, near_df):
-    ScatterMap(osm_df, 'OSM Location in Vancouver', osm_df['name'], 8, 0.6, 4)
+def showImgRoute(osm_df, img_df, merged_df, near_df):
+    ScatterMap(osm_df, 'OSM Location in Vancouver', osm_df['name'], 8, 0.6, 5)
     ScatterMap(img_df, 'Imgae Location', img_df['img'], 11, 0.8, 8)
-    RouteMap(merged_df, 'img', merged_df["lat_x"],
-             merged_df["lon_x"], 'User\'s Route with their Nearest Location in our OSM', 12, 0.9, 6)
-    RouteMap(near_df, 'img', img_df["lat"], img_df["lon"], 'route', 12, 0.9, 4)
+    RouteMap(merged_df, 'img', merged_df['lat_x'],
+             merged_df['lon_x'], 'User\'s Route with Their Nearest Locations in the OSM', 12, 0.9, 6)
+    RouteMap(near_df, 'img', img_df['lat'], img_df['lon'], 'User\'s Route Generated from Images with Near Amenities', 12, 0.9, 4)
+
+
+def showRestaurant(nearest, restaurant, name, themax, cuisine, chains, nonchains):
+    Map(nearest, 'The nearest restaurant')
+    ScatterColorMap(cuisine, cuisine['style'], 'The different cuisine restaurants in vancouver', cuisine['name'], 8, 0.8, 6)
+    ScatterMap(themax, 'The most restaurant with cuisine: '+name, themax['name'], 8, 0.8, 6)
+    ScatterColorMap(chains, chains['name'], 'The chain restaurant in vancouver', chains['name'], 8, 0.8, 7)
+    ScatterMap(nonchains, 'The non-chain restaurant in vancouver', nonchains['name'], 8, 0.8, 6)

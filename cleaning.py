@@ -1,6 +1,7 @@
 from io import open_code
 from os import path
 import os
+from math import *
 from numpy.core.numeric import NaN
 from numpy.lib.type_check import _imag_dispatcher
 import pandas as pd
@@ -18,15 +19,28 @@ import re
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from textblob import TextBlob
+import geocoder
 
-
-warnings.filterwarnings("ignore")
+warnings.filterwarnings('ignore')
 global unique_name
 unique_name = set()
 API_KEY = 'AIzaSyC3O-BdZRrBuOmC_nCvWcbnCdmxEWTztLg'
 gmaps = googlemaps.Client(key=API_KEY)
 global stop_words
 stop_words = set(stopwords.words('english'))
+file = 'Data/osm/amenities-vancouver.json.gz'
+#location = geocoder.ip('me')
+#loc = location.latlng
+loc = [49.282761666666666,-123.12364166666666]
+
+cuisine_style = ['acadian', 'afghan', 'american', 'arab', 'brazilian',
+       'buddhist', 'burmese', 'cambodian', 'caribbean', 'chinese',
+       'cuban', 'czech', 'dutch', 'ethiopian', 'filipino', 'french',
+       'german', 'greek', 'hong kong', 'indian', 'indonesian', 'irish',
+       'italian', 'jamaican', 'japanese', 'korean', 'lebanese', 'malaysian',
+       'malaysian', 'mediterranean', 'mexican', 'mexican', 'mongolian',
+       'moroccan', 'persian', 'peruvian', 'portuguese', 'singaporean',
+       'taiwanese', 'thai', 'turkish', 'ukranian', 'vietnamese', 'west_coast']
 
 
 def fill(X):
@@ -48,6 +62,9 @@ def fill(X):
 
 def clean_data(df):
     df['name'] = df.apply(fill, axis=1)
+    print('The osm data with filling names:')
+    df.info()
+    print()
     df.dropna(inplace=True)
     df.drop(['timestamp', 'tags'], axis=1, inplace=True)
     df.reset_index(drop=True, inplace=True)
@@ -88,8 +105,8 @@ def extract(name):
 
 def create_df(result):
 
-    lat = [place["geometry"]['location']['lat'] for place in result['results']]
-    lon = [place["geometry"]['location']['lng'] for place in result['results']]
+    lat = [place['geometry']['location']['lat'] for place in result['results']]
+    lon = [place['geometry']['location']['lng'] for place in result['results']]
     name = [place['name'] for place in result['results']]
     id = [place['place_id'] for place in result['results']]
     data = pd.DataFrame(
@@ -140,7 +157,6 @@ def remove_stopwords(X):
         if word not in stop_words and len(word) > 2 and word != 'nan':
             words.append(word)
     return words
-# --------------------------------------------
 
 
 def processing_text(commend):
@@ -226,14 +242,14 @@ def find_amenities(img, osm):
     triangle = abs(b**2 - c**2) - a**2
     return list(dis[(dis < 100) & (triangle <= 0) | (b < 100) | (c < 100)].index)
 
+def nearMe(df):
+    dis = haversine(df['lat'], df['lon'], loc[0], loc[1])
+    return dis
 
 def generateReview(out_directory):
     # read files and fill missing information
-    file = './Data/osm/amenities-vancouver.json.gz'
     osm_df = pd.read_json(file, lines=True)
-    print(osm_df.info())
     osm_df['name'] = osm_df.apply(fill, axis=1)
-    print(osm_df.info())
 
     # select useful amenity
     attraction = osm_df.loc[(osm_df['amenity'] == 'clock')
@@ -247,7 +263,7 @@ def generateReview(out_directory):
         reviews.to_json('./Data/reviews.json')
 
     # add more attraction in Vancouver
-    if not(path.exists('./Data/addition.json')):
+    if not (path.exists('./Data/addition.json')):
         addition()
 
     # combine comments df
@@ -256,8 +272,10 @@ def generateReview(out_directory):
     add2 = (pd.read_json('./Data/addition1.json', orient='records')).T
     add3 = (pd.read_json('./Data/addition2.json', orient='records')).T
     reviews = pd.concat([reviews, add1, add2, add3])
-
-    print(reviews)
+    print('The reviews data:')
+    print(reviews.head())
+    print()
+    reviews.info()
 
     # clean data
     reviews = (reviews.reset_index()).drop(columns=['index'])
@@ -274,27 +292,40 @@ def generateReview(out_directory):
     # select attraction with rank >4.5
     reviews = reviews.loc[reviews['rating'] > 4.5]
     reviews = reviews.apply(find_location, axis=1)
-    print(reviews)
+    print('The reviews data after cleaning:')
+    print(reviews.head())
+    print()
+    reviews.info()
+    print()
     # save and use for analyzing.py
-    reviews.to_json(out_directory)
+    #reviews.to_json(out_directory)
 
 
 def generateImg():
-    osm_file = './Data/osm/amenities-vancouver.json.gz'
-    osm_df = pd.read_json(osm_file, lines=True)
+    osm_df = pd.read_json(file, lines=True)
+    print('The osm data:')
+    osm_df.info()
+    print()
     osm_df = clean_data(osm_df)
-
+    print('The osm data after cleaning:')
+    osm_df.info()
+    print()
     img_path = './Image/photo'
     img_df = load_img_exif(img_path)
-
+    print('The image data:')
+    print(img_df)
+    print()
     index = img_df.apply(find_amenity, osm=osm_df, axis=1)
     merged_df = pd.merge(img_df, osm_df, left_on=index, right_index=True)
-
+    print('The image data with nearest locatons in osm data:')
+    print(merged_df)
+    print()
     img_df['next_lat'] = img_df['lat'].shift(-1)
     img_df['next_lon'] = img_df['lon'].shift(-1)
 
     osm_index = img_df.apply(find_amenities, osm=osm_df, axis=1)
     near_df = pd.DataFrame(columns=['img_index', 'osm_index'])
+
     for i in range(len(osm_index)):
         temp_df = pd.DataFrame(
             {'img_index': [i] * len(osm_index[i]), 'osm_index': osm_index[i]})
@@ -305,4 +336,41 @@ def generateImg():
     near_df = near_df.drop_duplicates('osm_index').reset_index(drop=True)
     near_df = pd.merge(near_df, osm_df, left_on='osm_index',
                        right_index=True, how='left')
+    print('The near amenities merged with user\'s route:')
+    print(near_df)
     return osm_df, img_df, merged_df, near_df
+
+def getStyle(string):
+    string = str(string).lower()
+    for style in cuisine_style:
+        if style in string:
+            return style
+    return 'other'
+
+
+def generateRestaurant():
+    df = pd.read_json(file, lines=True)
+    restaurant = df[df['amenity'] == 'restaurant']
+    restaurant = restaurant.reset_index(drop=True)
+    restaurant['dist'] = restaurant.apply(nearMe, axis=1)
+    nearest = restaurant[restaurant['dist'] < 300]
+
+    tags = restaurant['tags'].apply(pd.Series)
+    tags['style'] = tags['cuisine'].apply(getStyle)
+    nums = tags.groupby('style').size().reset_index(name='counts')
+    name = nums.loc[nums['counts'] == nums.counts.max()].values[0][0]
+    themax = tags[tags['style'] == name]
+    themax = pd.merge(restaurant, themax, left_index=True, right_index=True)
+
+    # different cuisine restaurant
+    cuisine = tags[tags['style'].notna()]
+    cuisine = pd.merge(restaurant, cuisine, left_index=True, right_index=True)
+    cuisine = cuisine.drop(cuisine[cuisine['style']=='other'].index)
+
+    # with chain restaurant
+    chains = tags[tags['brand:wikidata'].notna()]
+    chains = pd.merge(restaurant, chains, left_index=True, right_index=True)
+    
+    # non chain restaurant
+    nonchains = restaurant[~restaurant.isin(chains)]
+    return nearest, restaurant, name, themax, cuisine, chains, nonchains
