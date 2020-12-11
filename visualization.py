@@ -36,7 +36,7 @@ def Map(loc, title):
             'accesstoken': token,
             'center': {'lon': mean_lon, 'lat': mean_lat},
             'style': 'outdoors',
-            'zoom': 10})
+            'zoom': 9})
     fig.show()
 
 
@@ -52,7 +52,7 @@ def ScatterMap(df, title, name, zoom, opacity, size_max):
 
 def ScatterColorMap(df, color, title, name, zoom, opacity, size_max):
     fig = px.scatter_mapbox(df, lat='lat', lon='lon', hover_name=name,
-                            zoom=zoom, size=[1] * len(df), color = color, opacity=opacity,
+                            zoom=zoom, size=[1] * len(df), color=color, opacity=opacity,
                             color_discrete_sequence=px.colors.qualitative.G10,
                             size_max=size_max
                             )
@@ -158,12 +158,17 @@ def showImgRoute(osm_df, img_df, merged_df, near_df):
     ScatterMap(img_df, 'Imgae Location', img_df['img'], 11, 0.8, 8)
     RouteMap(merged_df, 'img', merged_df['lat_x'],
              merged_df['lon_x'], 'User\'s Route with Their Nearest Locations in the OSM', 12, 0.9, 6)
-    RouteMap(near_df, 'img', img_df['lat'], img_df['lon'], 'User\'s Route Generated from Images with Near Amenities', 12, 0.9, 4)
+    RouteMap(near_df, 'img', img_df['lat'], img_df['lon'],
+             'User\'s Route Generated from Images with Near Amenities', 12, 0.9, 4)
 
 
 def showRestaurant(nearest, restaurant, name, themax, cuisine, chains, nonchains):
     Map(nearest, 'The nearest restaurant')
-    ScatterColorMap(cuisine, cuisine['style'], 'The different cuisine restaurants in vancouver', cuisine['name'], 8, 0.8, 6)
-    ScatterMap(themax, 'The most restaurant with cuisine: '+name, themax['name'], 8, 0.8, 6)
-    ScatterColorMap(chains, chains['name'], 'The chain restaurant in vancouver', chains['name'], 8, 0.8, 7)
-    ScatterMap(nonchains, 'The non-chain restaurant in vancouver', nonchains['name'], 8, 0.8, 6)
+    ScatterColorMap(
+        cuisine, cuisine['style'], 'The different cuisine restaurants in vancouver', cuisine['name'], 8, 0.8, 6)
+    ScatterMap(themax, 'The most restaurant with cuisine: ' +
+               name, themax['name'], 8, 0.8, 6)
+    ScatterColorMap(
+        chains, chains['name'], 'The chain restaurant in vancouver', chains['name'], 8, 0.8, 7)
+    ScatterMap(nonchains, 'The non-chain restaurant in vancouver',
+               nonchains['name'], 8, 0.8, 6)

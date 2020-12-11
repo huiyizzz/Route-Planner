@@ -214,7 +214,7 @@ def generateRoute(output):
     # calculate heat and rate for spots
     data['heat'] = data['rating'] * 5 + data['user_ratings_total'] * 3
     data['rate'] = data['rating'] * 5 + \
-        data['polarity'] * 2 + data['subjectivity'] * 2
+        data['polarity'] * 3 + data['subjectivity'] * -2
     data = data.drop(['reviews', 'clean_text', 'polarity',
                       'subjectivity', 'rating', 'user_ratings_total'], axis=1)
     data = data.reset_index()
@@ -222,11 +222,11 @@ def generateRoute(output):
     print(data)
     print()
     # find shortest path
-    sign = 1
+    sign = 0
     shortest_path, shortest_time = router_plan(data, sign)
     print('The shortest route of interesting tourist attractions:')
     print(shortest_path)
-    print('The predicted time for the trip: ',shortest_time)
+    print('The predicted time for the trip: ', shortest_time)
     # write to file and use for visualization
     output_name = './Data/' + output
     file = open(output_name, 'w')

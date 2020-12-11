@@ -31,16 +31,16 @@ stop_words = set(stopwords.words('english'))
 file = 'Data/osm/amenities-vancouver.json.gz'
 #location = geocoder.ip('me')
 #loc = location.latlng
-loc = [49.282761666666666,-123.12364166666666]
+loc = [49.282761666666666, -123.12364166666666]
 
 cuisine_style = ['acadian', 'afghan', 'american', 'arab', 'brazilian',
-       'buddhist', 'burmese', 'cambodian', 'caribbean', 'chinese',
-       'cuban', 'czech', 'dutch', 'ethiopian', 'filipino', 'french',
-       'german', 'greek', 'hong kong', 'indian', 'indonesian', 'irish',
-       'italian', 'jamaican', 'japanese', 'korean', 'lebanese', 'malaysian',
-       'malaysian', 'mediterranean', 'mexican', 'mexican', 'mongolian',
-       'moroccan', 'persian', 'peruvian', 'portuguese', 'singaporean',
-       'taiwanese', 'thai', 'turkish', 'ukranian', 'vietnamese', 'west_coast']
+                 'buddhist', 'burmese', 'cambodian', 'caribbean', 'chinese',
+                 'cuban', 'czech', 'dutch', 'ethiopian', 'filipino', 'french',
+                 'german', 'greek', 'hong kong', 'indian', 'indonesian', 'irish',
+                 'italian', 'jamaican', 'japanese', 'korean', 'lebanese', 'malaysian',
+                 'malaysian', 'mediterranean', 'mexican', 'mexican', 'mongolian',
+                 'moroccan', 'persian', 'peruvian', 'portuguese', 'singaporean',
+                 'taiwanese', 'thai', 'turkish', 'ukranian', 'vietnamese', 'west_coast']
 
 
 def fill(X):
@@ -242,9 +242,11 @@ def find_amenities(img, osm):
     triangle = abs(b**2 - c**2) - a**2
     return list(dis[(dis < 100) & (triangle <= 0) | (b < 100) | (c < 100)].index)
 
+
 def nearMe(df):
     dis = haversine(df['lat'], df['lon'], loc[0], loc[1])
     return dis
+
 
 def generateReview(out_directory):
     # read files and fill missing information
@@ -283,14 +285,14 @@ def generateReview(out_directory):
     reviews = reviews.loc[reviews['user_ratings_total'] > 1000]
 
     # cleaning commends
+    # select attraction with rank >4.5
+    reviews = reviews.loc[reviews['rating'] > 4.5]
     reviews['clean_text'] = reviews['reviews'].apply(spelling)
     reviews = reviews.loc[reviews['clean_text'] != '']
     reviews['word_list'] = reviews['clean_text'].apply(processing_text)
     reviews = reviews.loc[reviews['word_list'] != '']
     reviews = reviews.drop_duplicates(subset=['name'])
 
-    # select attraction with rank >4.5
-    reviews = reviews.loc[reviews['rating'] > 4.5]
     reviews = reviews.apply(find_location, axis=1)
     print('The reviews data after cleaning:')
     print(reviews.head())
@@ -298,7 +300,7 @@ def generateReview(out_directory):
     reviews.info()
     print()
     # save and use for analyzing.py
-    #reviews.to_json(out_directory)
+    # reviews.to_json(out_directory)
 
 
 def generateImg():
@@ -340,6 +342,7 @@ def generateImg():
     print(near_df)
     return osm_df, img_df, merged_df, near_df
 
+
 def getStyle(string):
     string = str(string).lower()
     for style in cuisine_style:
@@ -358,7 +361,7 @@ def generateRestaurant():
     tags = restaurant['tags'].apply(pd.Series)
     tags['style'] = tags['cuisine'].apply(getStyle)
     nums = tags.groupby('style').size().reset_index(name='counts')
-    nums = nums.drop(nums[nums['style']=='other'].index)
+    nums = nums.drop(nums[nums['style'] == 'other'].index)
     name = nums.loc[nums['counts'] == nums.counts.max()].values[0][0]
     themax = tags[tags['style'] == name]
     themax = pd.merge(restaurant, themax, left_index=True, right_index=True)
@@ -366,13 +369,13 @@ def generateRestaurant():
     # different cuisine restaurant
     cuisine = tags[tags['style'].notna()]
     cuisine = pd.merge(restaurant, cuisine, left_index=True, right_index=True)
-    cuisine = cuisine.drop(cuisine[cuisine['style']=='other'].index)
+    cuisine = cuisine.drop(cuisine[cuisine['style'] == 'other'].index)
 
     # with chain restaurant
     chains = tags[tags['brand:wikidata'].notna()]
     chains = pd.merge(restaurant, chains, left_index=True, right_index=True)
-    
-    # non chain restaurant 
+
+    # non chain restaurant
     nonchains = restaurant[~restaurant.isin(chains)].dropna()
-    
+
     return nearest, restaurant, name, themax, cuisine, chains, nonchains

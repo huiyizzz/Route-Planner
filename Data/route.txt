@@ -1,2 +1,2 @@
-Origin->Queen Elizabeth Park->VanDusen Botanical Garden->English Bay Beach->Stanley Park->Grouse Mountain->Origin
-96
+Origin->Whytecliff Park | West Vancouver->Stanley Park->The Orpheum->Spanish Banks Beach Park->Golden Ears Provincial Park->Origin
+226
