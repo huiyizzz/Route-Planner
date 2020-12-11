@@ -4,8 +4,8 @@ from visualization import *
 
 
 def interestingRoute():
-    # generateReview('./Data/data.json')
-    # generateRoute('route.txt')
+    generateReview('./Data/data.json')
+    generateRoute('route.txt')
     showRoute()
 
 

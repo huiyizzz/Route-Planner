@@ -7,7 +7,7 @@ import re
 import nltk
 import matplotlib.pyplot as plt
 from PIL import Image
-from wordcloud import WordCloud, get_single_color_func
+from wordcloud import WordCloud
 
 
 def Map(loc, title):
@@ -89,7 +89,7 @@ def formate(word):
 
 # reference from CMPT459 Assignmet1
 # create wordcloud
-def wordcloud(nltk_count):
+def wordcloud(nltk_count, title):
     mask = np.array(Image.open('./Image/pic.jpg'))
     wordcloud = WordCloud(background_color="white",
                           contour_width=3, mask=mask,
@@ -99,11 +99,11 @@ def wordcloud(nltk_count):
     plt.figure(figsize=(20, 17))
     plt.imshow(wordcloud, interpolation="bilinear")
     plt.axis('off')
+    plt.title(title, fontsize=30)
 
 
 # prepare for wordcloud
 def pre_wordcloud(nlp_list):
-    all_words_unique_list = (nlp_list.explode()).unique()
     word_list = list(nlp_list.explode())
     nltk_count = nltk.FreqDist(word_list)
     return nltk_count
@@ -127,16 +127,20 @@ def showRoute():
 
     # generate map
     Map(loc, 'Interesting Route in Vancouver')
+
     # generate wordcloud
     # top-5
     loc['nlp_list'] = loc['word_list'].apply(formate)
     nltk_count = pre_wordcloud(loc['nlp_list'])
-    wordcloud(nltk_count)
+    title = 'Top-5 Rank Spots'
+    wordcloud(nltk_count, title)
+
     # last-5
     low = pd.read_json('./Data/low.json', orient='record')
     low['nlp_list'] = low['word_list'].apply(formate)
     nltk_count_low = pre_wordcloud(low['nlp_list'])
-    wordcloud(nltk_count_low)
+    title = 'Last-5 Rank Spots'
+    wordcloud(nltk_count_low, title)
 
 
 def generateImgRoute(osm_df, img_df, merged_df, near_df):

@@ -84,6 +84,8 @@ def extract(name):
     return name
 
 # create df that contains reviews
+
+
 def create_df(result):
 
     lat = [place["geometry"]['location']['lat'] for place in result['results']]
@@ -229,7 +231,9 @@ def generateReview(out_directory):
     # read files and fill missing information
     file = './Data/osm/amenities-vancouver.json.gz'
     osm_df = pd.read_json(file, lines=True)
+    print(osm_df.info())
     osm_df['name'] = osm_df.apply(fill, axis=1)
+    print(osm_df.info())
 
     # select useful amenity
     attraction = osm_df.loc[(osm_df['amenity'] == 'clock')
@@ -253,6 +257,8 @@ def generateReview(out_directory):
     add3 = (pd.read_json('./Data/addition2.json', orient='records')).T
     reviews = pd.concat([reviews, add1, add2, add3])
 
+    print(reviews)
+
     # clean data
     reviews = (reviews.reset_index()).drop(columns=['index'])
     reviews = reviews.dropna()
@@ -268,6 +274,7 @@ def generateReview(out_directory):
     # select attraction with rank >4.5
     reviews = reviews.loc[reviews['rating'] > 4.5]
     reviews = reviews.apply(find_location, axis=1)
+    print(reviews)
     # save and use for analyzing.py
     reviews.to_json(out_directory)
 

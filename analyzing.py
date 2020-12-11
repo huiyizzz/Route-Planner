@@ -24,29 +24,29 @@ class TSP:
             matrix[i].append(0)
         self.matrix = matrix
         self.names = names
-        self.num = len(names)  # 城市个数
-        self.temp_path = [i for i in range(0, self.num + 1)]  # 当前路径
-        self.temp_len = 0  # 当前路径长度
-        self.best_path = [0] * (self.num + 1)  # 最短路径
-        self.best_len = 99999999  # 最短路径的长度
+        self.num = len(names)  # number of spots
+        self.temp_path = [i for i in range(0, self.num + 1)]  # current route
+        self.temp_time = 0  # current route time
+        self.best_path = [0] * (self.num + 1)  # shortest route
+        self.best_time = 99999999  # shortest time
 
     def __backtrack(self, node):
         if node > self.num:
             v = self.matrix[self.temp_path[self.num]][1]
-            if (v != 0) and (v + self.temp_len < self.best_len):
-                self.best_len = v + self.temp_len
+            if (v != 0) and (v + self.temp_time < self.best_time):
+                self.best_time = v + self.temp_time
                 for i in range(1, self.num + 1):
                     self.best_path[i] = self.temp_path[i]
         else:
             for i in range(node, self.num + 1):
                 v = self.matrix[self.temp_path[node - 1]][self.temp_path[i]]
-                if (v != 0) and (v + self.temp_len < self.best_len):
+                if (v != 0) and (v + self.temp_time < self.best_time):
                     self.temp_path[node], self.temp_path[i] = self.temp_path[i], self.   temp_path[node]
-                    self.temp_len += self.matrix[self.temp_path[node - 1]
-                                                 ][self.temp_path[node]]
+                    self.temp_time += self.matrix[self.temp_path[node - 1]
+                                                  ][self.temp_path[node]]
                     self.__backtrack(node + 1)
-                    self.temp_len -= self.matrix[self.temp_path[node - 1]
-                                                 ][self.temp_path[node]]
+                    self.temp_time -= self.matrix[self.temp_path[node - 1]
+                                                  ][self.temp_path[node]]
                     self.temp_path[node], self.temp_path[i] = self.temp_path[i], self.   temp_path[node]
         return
 
@@ -59,7 +59,7 @@ class TSP:
             path_str += self.names[self.best_path[i]] + '->'
         path_str += self.names[1]
 
-        return path_str, self.best_len
+        return path_str, self.best_time
 
 # calculate review scores
 
@@ -178,7 +178,6 @@ def calculate_time(data, sign):
 
 
 def router_plan(data, sign):
-    router = list()
     if sign == 0:
         # rate first
         data = data.sort_values(by=['rate'], ascending=False)
@@ -195,6 +194,7 @@ def router_plan(data, sign):
     shortest_path, shortest_time = tsp.solve()
 
     return shortest_path, shortest_time
+
 
 def generateRoute(output):
 
@@ -218,10 +218,11 @@ def generateRoute(output):
     data = data.drop(['reviews', 'clean_text', 'polarity',
                       'subjectivity', 'rating', 'user_ratings_total'], axis=1)
     data = data.reset_index()
-
+    print(data)
     # find shortest path
-    sign = 0
+    sign = 1
     shortest_path, shortest_time = router_plan(data, sign)
+    print(shortest_path, shortest_time)
 
     # write to file and use for visualization
     output_name = './Data/' + output

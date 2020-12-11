@@ -1,2 +1,2 @@
-Origin->Stanley Park->English Bay Beach->Spanish Banks Beach Park->The Orpheum->Golden Ears Provincial Park->Origin
-202
+Origin->Queen Elizabeth Park->VanDusen Botanical Garden->English Bay Beach->Stanley Park->Grouse Mountain->Origin
+96
