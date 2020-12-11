@@ -15,9 +15,8 @@ import plotly.graph_objects as go
 import plotly.offline as py
 import pandas as pd
 
-import geocoder
-
 # get current location
+import geocoder
 location = geocoder.ip('me')
 loc = location.latlng
 # lat = 49.282761666666666
@@ -49,7 +48,7 @@ def Map(loc, title):
             'accesstoken': token,
             'center':{'lon':mean_lon,'lat':mean_lat},
             'style': 'outdoors',
-            'zoom': 15})
+            'zoom': 10})
     fig.show()
 
 def fill(X):
@@ -74,6 +73,15 @@ def haversine(point):
     d = 0.5 - np.cos((point['lat'] - loc[0]) * p)/2 + np.cos(loc[0] * p) * np.cos(point['lat'] * p) * (1 - np.cos((point['lon'] - loc[1]) * p))/2
     return 12742000 * np.arcsin(np.sqrt(d))
 
+def scatterMap(df, title, name=None):
+    if name is None:
+        fig = px.scatter_mapbox(lat=df["lat"], lon=df["lon"])
+    else:
+        fig = px.scatter_mapbox(lat=df["lat"], lon=df["lon"], hover_name=name)
+        
+    fig.update_layout(mapbox_style="open-street-map", title=title)
+    fig.show()
+
 file = 'Data/osm/amenities-vancouver.json.gz'
 df = pd.read_json(file, lines=True)
 # tags = df['tags'].apply(pd.Series)
@@ -88,7 +96,22 @@ restaurant['dist'] = restaurant.apply(haversine,axis=1)
 nearest = restaurant[restaurant['dist'] < 300]
 # Map(restaurant, 'all restaurant')
 Map(nearest, 'nearest')
+tags = restaurant['tags'].apply(pd.Series)
+nums = tags.groupby('cuisine').size().reset_index(name='counts')
+name = nums.loc[nums['counts'] == nums.counts.max()].values[0][0]
+themax = tags[tags['cuisine'] == name]
+themax = pd.merge(restaurant, themax, left_index=True, right_index=True)
+# Map(themax, 'the most restaurant with cuisine: '+name)
+scatterMap(themax, 'the most restaurant with cuisine: '+name)
 
+# with chain restaurant
+chains = tags[tags['brand:wikidata'].notna()]
+chains = pd.merge(restaurant, chains, left_index=True, right_index=True)
+scatterMap(chains, 'the chain restaurant in vancouver')
+
+# non chain restaurant
+nonchains = restaurant[~restaurant.isin(chains)]
+scatterMap(nonchains, 'non chains restaurant in vancouver')
 
 # exif = getGPSData('1.jpg')
 # latitude = exif['Latitude']
