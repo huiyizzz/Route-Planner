@@ -1,18 +1,23 @@
-from nltk.corpus import stopwords
-from textblob import TextBlob
-from nltk.stem import WordNetLemmatizer
+from io import open_code
 from os import path
+import os
 from numpy.core.numeric import NaN
+from numpy.lib.type_check import _imag_dispatcher
 import pandas as pd
+import numpy as np
+from datetime import datetime
+from GPSPhoto.gpsphoto import getGPSData
+from pandas.core.base import DataError
 from qwikidata.entity import WikidataItem
 from qwikidata.linked_data_interface import get_entity_dict_from_api
-
+import exifread
 import googlemaps
 import warnings
 import time
 import re
-
 from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from textblob import TextBlob
 
 
 warnings.filterwarnings("ignore")
@@ -69,9 +74,8 @@ def find_review_id(place):
             place_id=place['place_id'], fields=['name', 'user_ratings_total', 'rating', 'review'])
         return place_details['result']
 
+
 # cleaning name
-
-
 def extract(name):
     name = str(name)
     if '-' in name:
@@ -80,8 +84,6 @@ def extract(name):
     return name
 
 # create df that contains reviews
-
-
 def create_df(result):
 
     lat = [place["geometry"]['location']['lat'] for place in result['results']]
@@ -102,7 +104,6 @@ def create_df(result):
 
 
 def addition():
-
     result = gmaps.places_nearby(location='49.252336254279, -123.1142930446478',
                                  radius=50000, open_now=False, type='tourist_attraction')
     review = create_df(result)
@@ -113,8 +114,8 @@ def addition():
         time.sleep(3)
         result = (gmaps.places_nearby(page_token=next_token))
         review = create_df(result)
-        review.to_json('./Data/addition'+str(i)+'.json')
-        i = i+1
+        review.to_json('./Data/addition' + str(i) + '.json')
+        i = i + 1
 
 
 def remove_url_punctuation(X):
@@ -177,8 +178,54 @@ def find_location(row):
     return row
 
 
-def generateReview(out_directory):
+def load_img_exif(path):
+    # inital image dataframe
+    df = pd.DataFrame(columns=['img', 'lat', 'lon', 'datetime'])
+    file_list = os.listdir(path)
+    for file in file_list:
+        img = {}
+        img_file = os.path.join(path, file)
+        f = open(img_file, 'rb')
+        tags = exifread.process_file(f)
+        date_str = tags['EXIF DateTimeOriginal'].__str__()
+        date = datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+        exif = getGPSData(img_file)
+        img['img'] = file
+        img['lat'] = exif['Latitude']
+        img['lon'] = exif['Longitude']
+        img['datetime'] = date  # datetime.timestamp(date)
+        df = df.append(img, ignore_index=True)
+    df.sort_values(by='datetime', inplace=True)
+    return df
 
+
+def haversine(lat1, lon1, lat2, lon2):
+    # haversine function reference:
+    # https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula/21623206
+    a = (np.sin(np.radians(lat2 - lat1) / 2)**2
+         + np.cos(np.radians(lat1))
+         * np.cos(np.radians(lat2))
+         * np.sin(np.radians(lon2 - lon1) / 2)**2)
+    return 12742000 * np.arcsin(np.sqrt(a))
+
+
+def find_amenity(img, osm):
+    dis = haversine(img['lat'], img['lon'], osm['lat'], osm['lon'])
+    return np.argmin(dis)
+
+
+def find_amenities(img, osm):
+    a = haversine(img['lat'], img['lon'], img['next_lat'], img['next_lon'])
+    b = haversine(img['lat'], img['lon'], osm['lat'], osm['lon'])
+    c = haversine(img['next_lat'], img['next_lon'], osm['lat'], osm['lon'])
+    semi_p = (a + b + c) / 2
+    area = np.sqrt(semi_p * (semi_p - a) * (semi_p - b) * (semi_p - c))
+    dis = (2 * area) / a
+    triangle = abs(b**2 - c**2) - a**2
+    return list(dis[(dis < 100) & (triangle <= 0) | (b < 100) | (c < 100)].index)
+
+
+def generateReview(out_directory):
     # read files and fill missing information
     file = './Data/osm/amenities-vancouver.json.gz'
     osm_df = pd.read_json(file, lines=True)
@@ -223,3 +270,32 @@ def generateReview(out_directory):
     reviews = reviews.apply(find_location, axis=1)
     # save and use for analyzing.py
     reviews.to_json(out_directory)
+
+
+def generateImg():
+    osm_file = './Data/osm/amenities-vancouver.json.gz'
+    osm_df = pd.read_json(osm_file, lines=True)
+    osm_df = clean_data(osm_df)
+
+    img_path = './Image/photo'
+    img_df = load_img_exif(img_path)
+
+    index = img_df.apply(find_amenity, osm=osm_df, axis=1)
+    merged_df = pd.merge(img_df, osm_df, left_on=index, right_index=True)
+
+    img_df['next_lat'] = img_df['lat'].shift(-1)
+    img_df['next_lon'] = img_df['lon'].shift(-1)
+
+    osm_index = img_df.apply(find_amenities, osm=osm_df, axis=1)
+    near_df = pd.DataFrame(columns=['img_index', 'osm_index'])
+    for i in range(len(osm_index)):
+        temp_df = pd.DataFrame(
+            {'img_index': [i] * len(osm_index[i]), 'osm_index': osm_index[i]})
+        near_df = near_df.append(temp_df, ignore_index=True)
+
+    near_df = pd.merge(img_df, near_df, left_index=True,
+                       right_on='img_index', how='inner')
+    near_df = near_df.drop_duplicates('osm_index').reset_index(drop=True)
+    near_df = pd.merge(near_df, osm_df, left_on='osm_index',
+                       right_index=True, how='left')
+    return osm_df, img_df, merged_df, near_df

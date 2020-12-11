@@ -4,7 +4,6 @@ import plotly.offline as py
 import pandas as pd
 import numpy as np
 import re
-import plotly.graph_objects as go
 import nltk
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -41,6 +40,39 @@ def Map(loc, title):
     fig.show()
 
 
+def ScatterMap(df, title, name, zoom, opacity, size_max):
+    fig = px.scatter_mapbox(df, lat='lat', lon='lon', hover_name=name,
+                            zoom=zoom, size=[1] * len(df), opacity=opacity,
+                            color_discrete_sequence=px.colors.qualitative.G10,
+                            size_max=size_max
+                            )
+    fig.update_layout(mapbox_style='open-street-map', title=title)
+    fig.show()
+
+
+def RouteMap(df1, labels, lat, lon, title, zoom, opacity, size_max):
+    fig = px.scatter_mapbox(df1, lat="lat_y", lon="lon_y", labels=labels,
+                            zoom=zoom, color=labels,
+                            hover_name='name', size=[1] * len(df1), opacity=opacity,
+                            color_discrete_sequence=px.colors.qualitative.G10,
+                            size_max=size_max
+                            )
+    fig.add_trace(go.Scattermapbox(mode='lines+markers',
+                                   lat=lat,
+                                   lon=lon,
+                                   name='Actual',
+                                   marker={
+                                       'size': 12, 'color': 'LightSlateGray', 'opacity': 0.7},
+                                   line={'color': 'rgba(100, 100, 100, 0.4)'}
+                                   ))
+
+    fig.update_layout(
+        title=title,
+        autosize=True,
+        mapbox_style="open-street-map")
+    fig.show()
+
+
 # prepare for calculate word frequency
 def formate(word):
     res = ''
@@ -71,7 +103,7 @@ def wordcloud(nltk_count):
 
 # prepare for wordcloud
 def pre_wordcloud(nlp_list):
-    # all_words_unique_list = (nlp_list.explode()).unique()
+    all_words_unique_list = (nlp_list.explode()).unique()
     word_list = list(nlp_list.explode())
     nltk_count = nltk.FreqDist(word_list)
     return nltk_count
@@ -95,7 +127,6 @@ def showRoute():
 
     # generate map
     Map(loc, 'Interesting Route in Vancouver')
-
     # generate wordcloud
     # top-5
     loc['nlp_list'] = loc['word_list'].apply(formate)
@@ -106,3 +137,11 @@ def showRoute():
     low['nlp_list'] = low['word_list'].apply(formate)
     nltk_count_low = pre_wordcloud(low['nlp_list'])
     wordcloud(nltk_count_low)
+
+
+def generateImgRoute(osm_df, img_df, merged_df, near_df):
+    ScatterMap(osm_df, 'OSM Location in Vancouver', osm_df['name'], 8, 0.6, 4)
+    ScatterMap(img_df, 'Imgae Location', img_df['img'], 11, 0.8, 8)
+    RouteMap(merged_df, 'img', merged_df["lat_x"],
+             merged_df["lon_x"], 'User\'s Route with their Nearest Location in our OSM', 12, 0.9, 6)
+    RouteMap(near_df, 'img', img_df["lat"], img_df["lon"], 'route', 12, 0.9, 4)
