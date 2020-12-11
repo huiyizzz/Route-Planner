@@ -29,9 +29,9 @@ gmaps = googlemaps.Client(key=API_KEY)
 global stop_words
 stop_words = set(stopwords.words('english'))
 file = 'Data/osm/amenities-vancouver.json.gz'
-#location = geocoder.ip('me')
-#loc = location.latlng
-loc = [49.282761666666666, -123.12364166666666]
+location = geocoder.ip('me')
+loc = location.latlng
+#loc = [49.282761666666666, -123.12364166666666]
 
 cuisine_style = ['acadian', 'afghan', 'american', 'arab', 'brazilian',
                  'buddhist', 'burmese', 'cambodian', 'caribbean', 'chinese',
