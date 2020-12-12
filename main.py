@@ -1,6 +1,7 @@
 from cleaning import *
 from analyzing import *
 from visualization import *
+import sys
 
 
 def imageInfo():
@@ -39,6 +40,18 @@ def interestingRoute():
 
 
 if __name__ == '__main__':
-    imageInfo()
-    restaurant()
-    interestingRoute()
+    if len(sys.argv) != 2:
+        print('Please input the correct command.')
+    else:
+        if sys.argv[1] == 'photo':
+            imageInfo()
+        elif sys.argv[1] == 'restaurant':
+            restaurant()
+        elif sys.argv[1] == 'route':
+            interestingRoute()
+        elif sys.argv[1] == 'all':
+            interestingRoute()
+            restaurant()
+            imageInfo()
+        else:
+            print('Wrong input! Please input the correct command.')
